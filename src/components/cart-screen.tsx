@@ -2,17 +2,12 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Icon } from "@/components/icon";
-import { products, type Product } from "@/data/catalog";
+import { useStore, type CartItem } from "@/components/store-provider";
 
-type CartLine = Product & { quantity: number; color: string };
-
-const startingLines: CartLine[] = [
-  { ...products[0], quantity: 1, color: "Royal Blue" },
-  { ...products[1], quantity: 1, color: "Lavender" },
-  { ...products[2], quantity: 1, color: "Peach" },
-];
+type CartLine = CartItem;
 
 const money = (value: number) => `₹${value.toLocaleString("en-IN")}`;
 const amount = (price: string) => Number(price.replace(/[^0-9]/g, ""));
@@ -32,14 +27,16 @@ function QuantityControl({ quantity, onChange }: { quantity: number; onChange: (
   );
 }
 
-function ShippingProgress() {
+function ShippingProgress({ subtotal }: { subtotal: number }) {
+  const remaining = Math.max(0, 999 - subtotal);
+  const progress = Math.min(100, Math.round((subtotal / 999) * 100));
   return (
     <div className="rounded-xl border border-blue-100 bg-blue-50/80 px-3 py-3 sm:px-4">
       <div className="flex items-center gap-3">
         <span className="grid size-9 shrink-0 place-items-center rounded-full bg-white text-blue-600 shadow-sm"><Icon name="truck" className="size-5" /></span>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-3 text-[10px] text-blue-950 sm:text-xs"><b>You are ₹701 away from FREE SHIPPING!</b><span className="hidden sm:inline">Free Shipping on orders above ₹999</span></div>
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-blue-100"><div className="h-full w-[78%] rounded-full bg-blue-600" /></div>
+          <div className="flex items-center justify-between gap-3 text-[10px] text-blue-950 sm:text-xs"><b>{remaining ? `You are ₹${remaining.toLocaleString("en-IN")} away from FREE SHIPPING!` : "You have FREE SHIPPING!"}</b><span className="hidden sm:inline">Free Shipping on orders above ₹999</span></div>
+          <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-blue-100"><div className="h-full rounded-full bg-blue-600 transition-all" style={{ width: `${progress}%` }} /></div>
         </div>
       </div>
     </div>
@@ -65,31 +62,44 @@ function CartLineCard({ line, onChange, onRemove }: { line: CartLine; onChange: 
   );
 }
 
-function PriceDetails({ lines, onCheckout }: { lines: CartLine[]; onCheckout: () => void }) {
+function PriceDetails({ lines, promoApplied, onCheckout }: { lines: CartLine[]; promoApplied: boolean; onCheckout: () => void }) {
   const subtotal = lines.reduce((sum, line) => sum + amount(line.price) * line.quantity, 0);
   const discount = lines.reduce((sum, line) => sum + discountFor(line), 0);
-  const shipping = subtotal > 9999 ? 0 : 99;
-  const total = subtotal - discount + shipping;
+  const promoDiscount = promoApplied ? Math.round((subtotal - discount) * 0.05) : 0;
+  const shipping = subtotal >= 999 ? 0 : 99;
+  const total = subtotal - discount - promoDiscount + shipping;
   return (
     <aside className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_26px_rgba(15,23,42,0.04)] sm:p-5 lg:sticky lg:top-28">
       <h2 className="font-serif text-xl font-bold text-blue-950 sm:text-2xl">Price Details</h2>
-      <div className="mt-4 space-y-3 text-xs text-slate-700 sm:text-sm"><div className="flex justify-between"><span>Subtotal ({lines.reduce((sum, line) => sum + line.quantity, 0)} items)</span><b>{money(subtotal)}</b></div><div className="flex justify-between"><span className="text-emerald-600">Discount</span><b className="text-emerald-600">-{money(discount)}</b></div><div className="flex justify-between"><span>Shipping Charges <span className="text-slate-400">ⓘ</span></span><b>{shipping === 0 ? "FREE" : money(shipping)}</b></div></div>
+      <div className="mt-4 space-y-3 text-xs text-slate-700 sm:text-sm"><div className="flex justify-between"><span>Subtotal ({lines.reduce((sum, line) => sum + line.quantity, 0)} items)</span><b>{money(subtotal)}</b></div><div className="flex justify-between"><span className="text-emerald-600">Discount</span><b className="text-emerald-600">-{money(discount)}</b></div>{promoApplied ? <div className="flex justify-between"><span className="text-emerald-600">Promo discount</span><b className="text-emerald-600">-{money(promoDiscount)}</b></div> : null}<div className="flex justify-between"><span>Shipping Charges <span className="text-slate-400">ⓘ</span></span><b>{shipping === 0 ? "FREE" : money(shipping)}</b></div></div>
       <div className="my-4 border-t border-slate-200 pt-4"><div className="flex items-center justify-between text-sm font-bold text-blue-950 sm:text-base"><span>Total Amount</span><span>{money(total)}</span></div><p className="mt-1 text-[10px] text-slate-500">(Inclusive of all taxes)</p></div>
-      <div className="rounded-lg bg-emerald-50 px-3 py-2.5 text-xs text-emerald-700"><span>Total savings</span><b className="float-right">{money(discount)}</b></div>
-      <button type="button" onClick={onCheckout} className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-blue-600 text-sm font-bold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700">Proceed to Checkout <Icon name="arrow" className="size-4" /></button>
+      <div className="rounded-lg bg-emerald-50 px-3 py-2.5 text-xs text-emerald-700"><span>Total savings</span><b className="float-right">{money(discount + promoDiscount)}</b></div>
+      <button type="button" disabled={!lines.length} onClick={onCheckout} className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-blue-600 text-sm font-bold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none">Proceed to Checkout <Icon name="arrow" className="size-4" /></button>
       <p className="mt-2 text-center text-[10px] text-emerald-600">♙ Secure Checkout</p>
     </aside>
   );
 }
 
 export function CartScreen() {
-  const [lines, setLines] = useState(startingLines);
+  const router = useRouter();
+  const { cartItems, updateQuantity, removeFromCart } = useStore();
+  const lines = cartItems;
   const [promoOpen, setPromoOpen] = useState(false);
+  const [promoCode, setPromoCode] = useState("");
+  const [promoApplied, setPromoApplied] = useState(false);
   const [message, setMessage] = useState("");
   const itemCount = lines.reduce((sum, line) => sum + line.quantity, 0);
-  const updateLine = (id: string, quantity: number) => setLines((current) => current.map((line) => line.id === id ? { ...line, quantity } : line));
-  const removeLine = (id: string) => setLines((current) => current.filter((line) => line.id !== id));
-  const checkout = () => setMessage(lines.length ? "Checkout is ready for the next step." : "Your cart is empty.");
+  const subtotal = lines.reduce((sum, line) => sum + amount(line.price) * line.quantity, 0);
+  const checkout = () => { if (lines.length) router.push("/checkout"); else setMessage("Your cart is empty."); };
+  const applyPromo = () => {
+    if (["SHREERA10", "SAVE5"].includes(promoCode.trim().toUpperCase())) {
+      setPromoApplied(true);
+      setMessage("Promo code applied successfully.");
+    } else {
+      setPromoApplied(false);
+      setMessage("Try SHREERA10 or SAVE5 for a valid promo code.");
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20 text-slate-900 md:pb-0">
@@ -100,10 +110,10 @@ export function CartScreen() {
         </div>
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(310px,0.8fr)] lg:items-start lg:gap-8">
           <div>
-            <ShippingProgress />
+            <ShippingProgress subtotal={subtotal} />
             <div className="mt-4 space-y-3">
               {lines.length ? lines.map((line) => (
-                <CartLineCard key={line.id} line={line} onChange={(quantity) => updateLine(line.id, quantity)} onRemove={() => removeLine(line.id)} />
+                <CartLineCard key={line.lineId} line={line} onChange={(quantity) => updateQuantity(line.lineId, quantity)} onRemove={() => removeFromCart(line.lineId)} />
               )) : (
                 <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center">
                   <p className="font-serif text-xl font-bold text-blue-950">Your cart is empty</p>
@@ -119,13 +129,13 @@ export function CartScreen() {
               </button>
               {promoOpen && (
                 <div className="mt-3 flex gap-2">
-                  <input aria-label="Promo code" placeholder="Enter promo code" className="h-9 min-w-0 flex-1 rounded-lg border border-slate-200 px-3 text-xs outline-none focus:border-blue-500" />
-                  <button type="button" onClick={() => setMessage("Promo codes will be available at checkout.")} className="rounded-lg bg-blue-50 px-3 text-xs font-bold text-blue-700">Apply</button>
+                  <input aria-label="Promo code" value={promoCode} onChange={(event) => setPromoCode(event.target.value)} placeholder="Enter promo code" className="h-9 min-w-0 flex-1 rounded-lg border border-slate-200 px-3 text-xs uppercase outline-none focus:border-blue-500" />
+                  <button type="button" onClick={applyPromo} className="rounded-lg bg-blue-50 px-3 text-xs font-bold text-blue-700">Apply</button>
                 </div>
               )}
             </div>
           </div>
-          <PriceDetails lines={lines} onCheckout={checkout} />
+          <PriceDetails lines={lines} promoApplied={promoApplied} onCheckout={checkout} />
         </div>
         {message && <p role="status" className="mt-4 text-center text-xs font-semibold text-blue-700">{message}</p>}
       </div>

@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { Brand } from "./brand";
 import { Icon } from "./icon";
+import { useStore } from "./store-provider";
 
 const menuItems = [
   { label: "Home", href: "/", icon: "home" as const },
@@ -15,14 +16,15 @@ const menuItems = [
 ];
 
 const accountItems = [
-  { label: "Search", href: "/search", icon: "search" as const },
-  { label: "Wishlist", href: "/wishlist", icon: "heart" as const, count: 5 },
-  { label: "Shopping bag", href: "/cart", icon: "bag" as const, count: 3 },
-  { label: "Profile", href: "/profile", icon: "user" as const },
+  { label: "Search", href: "/search", icon: "search" as const, countKey: null },
+  { label: "Wishlist", href: "/wishlist", icon: "heart" as const, countKey: "wishlistCount" as const },
+  { label: "Shopping bag", href: "/cart", icon: "bag" as const, countKey: "cartCount" as const },
+  { label: "Profile", href: "/profile", icon: "user" as const, countKey: null },
 ];
 
 export function MobileMenu() {
   const [open, setOpen] = useState(false);
+  const { cartCount, wishlistCount } = useStore();
 
   useEffect(() => {
     if (!open) return;
@@ -83,7 +85,7 @@ export function MobileMenu() {
               <Link key={item.label} href={item.href} onClick={closeMenu} className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-blue-950 transition hover:bg-blue-50 hover:text-blue-600">
                 <span className="relative">
                   <Icon name={item.icon} className="size-5 text-blue-600" />
-                  {item.count ? <span className="absolute -right-2 -top-2 min-w-4 rounded-full bg-blue-600 px-1 text-center text-[8px] leading-4 text-white">{item.count}</span> : null}
+                  {item.countKey && (item.countKey === "cartCount" ? cartCount : wishlistCount) ? <span className="absolute -right-2 -top-2 min-w-4 rounded-full bg-blue-600 px-1 text-center text-[8px] leading-4 text-white">{item.countKey === "cartCount" ? cartCount : wishlistCount}</span> : null}
                 </span>
                 {item.label}
                 <Icon name="arrow" className="ml-auto size-4 text-slate-300" />

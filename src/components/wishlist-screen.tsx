@@ -2,33 +2,38 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Icon } from "@/components/icon";
 import { products, type Product } from "@/data/catalog";
+import { useStore } from "@/components/store-provider";
 
 type WishItem = Product & { color: string };
-
-const initialItems: WishItem[] = [
-  { ...products[0], color: "Royal Blue" },
-  { ...products[1], color: "Lavender" },
-  { ...products[2], color: "Peach" },
-  { ...products[3], color: "Sea Green" },
-  { ...products[4], color: "Beige" },
-];
+const colors: Record<string, string> = { "royal-blue-soft-silk": "Royal Blue", "lavender-banarasi": "Lavender", "peach-kanjivaram": "Peach", "sea-green-soft-silk": "Sea Green", "beige-banarasi": "Beige" };
 
 export function WishlistScreen() {
-  const [items, setItems] = useState(initialItems);
+  const router = useRouter();
+  const { wishlistIds, removeFromWishlist, clearWishlist, addToCart } = useStore();
+  const items: WishItem[] = wishlistIds.map((id) => products.find((product) => product.id === id)).filter((product): product is Product => Boolean(product)).map((product) => ({ ...product, color: colors[product.id] ?? "Royal Blue" }));
   const [message, setMessage] = useState("");
 
-  const removeItem = (id: string) => setItems((current) => current.filter((item) => item.id !== id));
-  const clearAll = () => setItems([]);
+  const moveToCart = (item: WishItem) => {
+    addToCart(item, { color: item.color, size: "Free Size" });
+    removeFromWishlist(item.id);
+    setMessage(`${item.name} moved to your cart.`);
+  };
+
+  const buyNow = (item: WishItem) => {
+    addToCart(item, { color: item.color, size: "Free Size" });
+    router.push("/checkout");
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 pb-20 text-slate-900 md:pb-0">
       <main className="mx-auto max-w-7xl px-4 pb-12 pt-5 sm:px-6 sm:pt-8 lg:px-8 lg:pt-10">
         <div className="mb-5 flex items-center justify-between gap-3 sm:mb-6">
           <div><h1 className="font-serif text-2xl font-bold text-blue-950 sm:text-4xl">My Wishlist ({items.length})</h1><p className="mt-1 text-xs text-slate-500 sm:text-sm">Your favourite styles, all in one place.</p></div>
-          <button type="button" onClick={clearAll} disabled={!items.length} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-blue-200 bg-white px-3 text-[10px] font-bold text-blue-800 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50 sm:h-10 sm:rounded-md sm:px-4 sm:text-xs"><Icon name="trash" className="size-4" /> Clear All</button>
+          <button type="button" onClick={clearWishlist} disabled={!items.length} className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full border border-blue-200 bg-white px-3 text-[10px] font-bold text-blue-800 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50 sm:h-10 sm:rounded-md sm:px-4 sm:text-xs"><Icon name="trash" className="size-4" /> Clear All</button>
         </div>
 
         {items.length ? (
@@ -44,9 +49,9 @@ export function WishlistScreen() {
                   <div className="mt-1.5 flex items-center gap-2"><b className="text-sm text-blue-950">{item.price}</b><span className="text-[9px] text-slate-400 line-through">{item.originalPrice}</span><span className="text-[9px] font-semibold text-rose-500">{item.discount}</span></div>
                   <p className="mt-1 text-[10px] font-semibold text-emerald-600">In Stock</p>
                   <p className="mt-1.5 flex items-center gap-2 text-[10px] text-slate-600"><span className="size-3 rounded-full border border-white bg-blue-600 shadow-sm" /> {item.color}</p>
-                  <div className="mt-3 grid grid-cols-2 gap-2"><Link href="/cart" className="inline-flex h-8 items-center justify-center gap-1 rounded-md border border-slate-300 text-[9px] font-bold text-blue-950 transition hover:border-blue-500 hover:bg-blue-50 sm:text-[10px]"><Icon name="bag" className="size-3.5" /> Move to Cart</Link><Link href="/cart" className="inline-flex h-8 items-center justify-center rounded-md bg-blue-600 text-[9px] font-bold text-white transition hover:bg-blue-700 sm:text-[10px]">Buy Now</Link></div>
+                  <div className="mt-3 grid grid-cols-2 gap-2"><button type="button" onClick={() => moveToCart(item)} className="inline-flex h-8 items-center justify-center gap-1 rounded-md border border-slate-300 text-[9px] font-bold text-blue-950 transition hover:border-blue-500 hover:bg-blue-50 sm:text-[10px]"><Icon name="bag" className="size-3.5" /> Move to Cart</button><button type="button" onClick={() => buyNow(item)} className="inline-flex h-8 items-center justify-center rounded-md bg-blue-600 text-[9px] font-bold text-white transition hover:bg-blue-700 sm:text-[10px]">Buy Now</button></div>
                 </div>
-                <button type="button" onClick={() => removeItem(item.id)} aria-label={`Remove ${item.name} from wishlist`} className="absolute right-2 top-2 grid size-8 place-items-center rounded-full border border-slate-200 text-rose-500 transition hover:bg-rose-50"><Icon name="heart" className="size-4" /></button>
+                <button type="button" onClick={() => { removeFromWishlist(item.id); setMessage(`${item.name} removed from your wishlist.`); }} aria-label={`Remove ${item.name} from wishlist`} className="absolute right-2 top-2 grid size-8 place-items-center rounded-full border border-slate-200 text-rose-500 transition hover:bg-rose-50"><Icon name="heart" className="size-4" /></button>
                 <button type="button" onClick={() => setMessage(`${item.name} is saved in your wishlist.`)} aria-label={`More options for ${item.name}`} className="absolute bottom-11 right-2 hidden text-slate-500 sm:block"><Icon name="dots" className="size-4" /></button>
               </article>
             ))}

@@ -41,7 +41,7 @@ Replace the remote URL with the repository you created. Do not commit `.env` fil
 1. Sign in to Vercel and choose **Add New → Project**.
 2. Import the GitHub repository.
 3. Keep the detected framework as **Next.js** and the default build settings.
-4. Add any required environment variables in Vercel before deploying.
+4. Add `NEXT_PUBLIC_SITE_URL` with your production URL (for example `https://your-store.vercel.app`) so Open Graph links use the deployed domain.
 5. Select **Deploy**. Future pushes to `main` will create new production deployments.
 
 No custom Vercel configuration is required for this Next.js App Router project.

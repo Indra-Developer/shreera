@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Brand } from "./brand";
 import { Icon } from "./icon";
 import { MobileMenu } from "./mobile-menu";
+import { StoreActions } from "./store-actions";
 
 const navItems = [
   { label: "Home", href: "/" },
@@ -11,28 +12,6 @@ const navItems = [
   { label: "Our Story", href: "/about" },
   { label: "Contact", href: "/contact" },
 ];
-
-function SearchAction() {
-  return <Link href="/search" aria-label="Search" className="grid size-10 place-items-center rounded-full text-blue-950 transition hover:bg-blue-50 hover:text-blue-600"><Icon name="search" /></Link>;
-}
-
-function BagAction() {
-  return (
-    <Link href="/cart" aria-label="Shopping bag" className="relative grid size-10 place-items-center rounded-full text-blue-950 transition hover:bg-blue-50 hover:text-blue-600">
-      <Icon name="bag" />
-      <span className="absolute right-0 top-0 min-w-4 rounded-full bg-blue-600 px-1 text-center text-[9px] font-bold leading-4 text-white ring-2 ring-white">3</span>
-    </Link>
-  );
-}
-
-function WishlistAction() {
-  return (
-    <Link href="/wishlist" aria-label="Wishlist" className="relative grid size-10 place-items-center rounded-full text-blue-950 transition hover:bg-blue-50 hover:text-blue-600">
-      <Icon name="heart" />
-      <span className="absolute right-0 top-0 min-w-4 rounded-full bg-blue-600 px-1 text-center text-[9px] font-bold leading-4 text-white ring-2 ring-white">5</span>
-    </Link>
-  );
-}
 
 export function SiteHeader({ activePage = "home", mobileBack = false, mobileBackHref = "/", mobileMode = "menu" }: { activePage?: "home" | "categories" | "collections" | "about" | "contact" | "none"; mobileBack?: boolean; mobileBackHref?: string; mobileMode?: "menu" | "back" | "none" }) {
   return (
@@ -63,9 +42,7 @@ export function SiteHeader({ activePage = "home", mobileBack = false, mobileBack
             })}
           </nav>
           <div className="ml-auto flex items-center gap-0.5 sm:gap-1.5">
-            <SearchAction />
-            <WishlistAction />
-            <BagAction />
+            <StoreActions />
             <div className="ml-2 hidden items-center gap-2 border-l border-slate-200 pl-4 lg:flex">
               <Link href="/profile" className="flex items-center gap-2"><Image src="/images/royal-blue-saree.png" alt="Anjali" width={36} height={36} className="size-9 rounded-full object-cover object-top" /><span className="text-xs font-bold text-blue-950">Hi, Anjali</span></Link>
             </div>
